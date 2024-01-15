@@ -113,13 +113,16 @@ From the example of the urls.py, we have a url with a dynamic parameter. These p
 
 1. HttpRequest is the request passed to the function
 2. template_name is the name and path to the template (html file)
-
-    [!Note]
-    django looks inside the template folder automatically
 3. context is used to provide the template any kind of data, so the template can use it
+
+> [!NOTE] 
+> Django looks inside the template folder automatically
 
 >**return render(request, "bookstore/book.html", {\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"book_title": book_name,\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"book_attributes": book_attributes\
 })**
+
+
+
 
