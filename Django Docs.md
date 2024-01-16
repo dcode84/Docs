@@ -223,10 +223,46 @@ class Book(models.Model)
     )
 </pre>
 
+### Creating an entry to the database
+
+To create and object that will be passed into the database, simple contructor initialization can be used. So if a new book is published, an instance of the Book model can be created. Using the example of the previous section:
+
+<pre>
+    hunger_games = Book(
+        title = "Hunger Games",
+        rating = 5
+        description = "Katnisss",
+        author_id = 1
+    )
+</pre>
+
+> [!NOTE]
+> Some fields 
+
+### Built-in functions
+
+#### save()
+
+Calling save on a model object will the object data to the database.
+
 > [!NOTE]
 > The variable name (such as title) will be the name of a column inside a table. FieldTypes are the corresponding data types inside the database.
 
-Here is a list of the most commonly used field types
+### Field Options
+
+#### blank
+
+If a field has blank=True, form validation will allow entry of an empty value. It is validation related.
+
+#### editable
+
+If False, the field will not be displayed in the admin or any other ModelForm. They are also skipped during model validation. Default is True.
+
+#### null
+
+If True, Django will store empty values as NULL in the database. Default is False.
+
+### Field Types
 
 #### CharField(max_length, **options)
 
@@ -246,12 +282,44 @@ A floating-point number represented in Python by a float instance. It is a less 
 
 #### DecimalField(max_digits=None, decimal_places=None, **options)
 
-A fixed-precision decimal number, represented in Python by a Decimal instance. max_digits represents the maximum allowed number of digits. decimal_places represents the amount of numbers after the floating point.
+A fixed-precision decimal number, represented in Python by a Decimal instance. 
+
+##### max_digits 
+
+Represents the maximum allowed number of digits. 
+
+##### decimal_places 
+
+Represents the amount of numbers after the floating point.
 
 > [!IMPORTANT]
 > Note that **max_digits** must be _greater than or equal to_ **decimal_places**. max_digits counts for numbers before and after the floating point.
 
 #### DateField(auto_now=False, auto_now_add=False, **options)
 
+A date, represented in Python by a datetime.date instance.
 
+##### auto_now
+
+Automatically set the field to now every time the object is saved. Useful for “last-modified” timestamps. Note that the current date is always used.
+
+It is automatically updated when calling Model.save().
+
+##### auto_now_add
+
+Sets the field when the object is first created. Current date is always used.
+
+> [!IMPORTANT]
+> Setting auto_now or auto_now_add to True will cause the field to have editable=False and blank=True set. That means they are nullable. 
+**VERY CONFUSING, BECAUSE MAKING THEM BASICALLY NULLABLE BY SETTING THEM TO FALSE MAKES MORE SENSE**
+
+### Migrations
+
+Migrations are used to create or alter a database. Migrations are a set of instructions as python code on how to treat data or the database. These can be creating a table, altering a table or even deleting a table.
+
+> python manage\.py makemigrations
+
+This simply creates migrations, however it does not perform those operations yet. To make django perform all the migrations and run them against the database, a command called migrate is needed. However it will only run migrations that have not already been migrated.
+
+> python managa\.py migrate
 
