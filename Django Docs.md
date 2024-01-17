@@ -73,17 +73,17 @@ STATICFILES_DIRS = [
 
 # URLS
 
-#### Project urls\.py
+### Project urls\.py
 
 Inside the project urls\.py, app urls need to be included via the include function from the **django.urls** module. It'll look like this
 
 >path("bookstore/", include("bookstore.urls"))
 
-#### App urls\.py (without generic views)
+### App urls\.py (without generic views)
 
 **The path function from django.urls aswell as the views\.py need to be imported.**
 
-Importing views is done via
+Importing views is done via (dot means in the same folder)
 > from . import views
 
 Sometime it is important to add a variable above urlpatterns named **app_name**. The name of the app should be assigned to this. (e.g bookstore)
@@ -93,6 +93,9 @@ Urls can be given and should get a name. Here an example of an url with a dynami
 > path("book/<str\:book_name>/", views.book, name='book')
 
 The book function inside the views module is used to process this url. The dynamic part of this url accepts a string. This can also be an int.
+
+> [!IMPORTANT]
+> The **name** attribute is going to be important once templates are introduced. The name can then be used in correlation with the url-tag.
 
 # Views
 
@@ -132,19 +135,19 @@ return render(request, "bookstore/book.html", {
 > Django looks inside the template folder automatically
 
 # [TEMPLATES](https://docs.djangoproject.com/en/5.0/ref/templates/language/) (Django Template Language DTL)
-### Template syntax
+## Template syntax
 
 Inside django templates, any js, html and css functionality will work. Django translates the template into valid html.
 
-### Variables {{ variable }} 
+## Variables {{ variable }} 
 
 Double curly brackets are used to display a single value.
 
-### Tags {% %}
+## Tags {% %}
 
 Tags are more complex variables. They can be used to iterate over items or control the flow of the template. The for-tag is used to iterate over lists. Most tags are not self closing, so they have to be closed manually.
 
-#### for
+### for
 
 <pre>
 {% for person in people %}
@@ -152,7 +155,7 @@ Tags are more complex variables. They can be used to iterate over items or contr
 {% endblock %} 
 </pre>
 
-#### if 
+### if 
 
 Boolean operators (&&, ||, !) can be replaced by plain english (and, or, not) 
 
@@ -166,6 +169,14 @@ Boolean operators (&&, ||, !) can be replaced by plain english (and, or, not)
 {% endif %}
 </pre>
 
+### url
+
+The url-tag is used to forward to a different link, so it is mainly used inside a href attribute of a html link-tag.
+
+<pre>
+{% url "urlname" value1, value2, ... %}
+</pre>
+
 ### Filters {{ variable|filter }} 
 
 There are many filters that can be applied to change a variable. The name of the variable depends on the context that is passed into the template. To name a few
@@ -174,27 +185,27 @@ There are many filters that can be applied to change a variable. The name of the
 2. variable|title
 3. variable|length
 
-### Template inheritance (Tags)
+## Template inheritance (Tags)
 
-#### block
+### block
 
 Block is used by child templates to fill a base/layout template. It needs a name it can be referenced with.
 
 > {% block name %}{% endblock %} 
 
-#### extends 
+### extends 
 
 Extends tells the template engine that this template extends another. A child template defines this and then extends a base/layout template. Extends needs a path to the base/layout and does not need a closing tag.
 
 > {% extends "path" %}
 
-#### include
+### include
 
 Unlike other inheritance tags, include does not need a closing tag. However, it needs a path to the template that is to be included.
 
 > {% include "path" %}
 
-#### load
+### load
 
 Load provides a mechanism to load external files, such as static files like CSS, javascript or images.
 
@@ -204,7 +215,7 @@ This can then be used inside, for example link html tags. It is also possible to
 
 > {% load foo bar **from** somelibrary %}
 
-## Models
+# Models
 
 Django provides a models\.py file for every module. This is where we get into databases. By defining models such as Book, django will create tables from these models. In the case of Book, it will go ahead and create this table with a few twists. The table name will be pluralized and set to lowercase.
 
@@ -223,7 +234,10 @@ class Book(models.Model)
     )
 </pre>
 
-### Creating an entry to the database
+> [!NOTE]
+> The variable name (such as title) will be the name of a column inside a table. FieldTypes are the corresponding data types inside the database.
+
+## Creating an entry to the database
 
 To create and object that will be passed into the database, simple contructor initialization can be used. So if a new book is published, an instance of the Book model can be created. Using the example of the previous section:
 
@@ -237,16 +251,33 @@ To create and object that will be passed into the database, simple contructor in
 </pre>
 
 > [!NOTE]
-> Some fields 
+> Some fields are initialized automatically, such as date_published - it will have the value of datetime.now
 
-### Built-in functions
+## Built-in functions
 
-#### save()
+### save()
 
 Calling save on a model object will the object data to the database.
 
-> [!NOTE]
-> The variable name (such as title) will be the name of a column inside a table. FieldTypes are the corresponding data types inside the database.
+### Model_name.objects
+
+objects is a static field that exists for every model, because it inherits from the Model class.
+
+#### .all()
+
+Returns a QuerySet of all the items that are present in a specific table.
+
+#### .get(**fields)
+
+To get a specific item out of the database, get() can be used to get a unique entry. Throws an error if there is multiple entries.
+
+#### .filter()
+
+Filter is returning a QuerySet of all the items that meet a condition. Multiple conditions are allowed.
+
+### Field Lookups
+
+
 
 ### Field Options
 
@@ -262,7 +293,7 @@ If False, the field will not be displayed in the admin or any other ModelForm. T
 
 If True, Django will store empty values as NULL in the database. Default is False.
 
-### Field Types
+## Field Types
 
 #### CharField(max_length, **options)
 
@@ -310,10 +341,10 @@ It is automatically updated when calling Model.save().
 Sets the field when the object is first created. Current date is always used.
 
 > [!IMPORTANT]
-> Setting auto_now or auto_now_add to True will cause the field to have editable=False and blank=True set. That means they are nullable. 
+> Setting auto_now or auto_now_add to True will cause the field to have editable=False and blank=True set. 
 **VERY CONFUSING, BECAUSE MAKING THEM BASICALLY NULLABLE BY SETTING THEM TO FALSE MAKES MORE SENSE**
 
-### Migrations
+# Migrations
 
 Migrations are used to create or alter a database. Migrations are a set of instructions as python code on how to treat data or the database. These can be creating a table, altering a table or even deleting a table.
 
@@ -323,3 +354,21 @@ This simply creates migrations, however it does not perform those operations yet
 
 > python managa\.py migrate
 
+# Query functions
+
+With django, it is not needed to know SQL syntax. Django has built-in query functions, that are then executed in the database level. By calling query functions, django translates them into SQL syntax and executes it on the database.
+
+> [!WARNING]
+> Even if it is not required to know SQL, it is highly recommended to know SQL nonetheless. SQL is a very crucial part of backend, aswell as fullstack development
+
+#### List of common query functions
+
+- order_by
+- distinct
+- all
+- filter
+- get
+- aggregate
+- exists
+
+> [!IMPORTANT] Some of them return a QuerySet, whilst others don't
