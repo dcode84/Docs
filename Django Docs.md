@@ -229,7 +229,7 @@ class Book(models.Model)
     description = models.CharField(max_lenght=255)
     date_published = models.DateField()
     author_id = models.ForeignKey(
-        "Author",
+        Author,
         on_delete=models.CASCADE
     )
 </pre>
@@ -344,6 +344,27 @@ Sets the field when the object is first created. Current date is always used.
 > Setting auto_now or auto_now_add to True will cause the field to have editable=False and blank=True set. 
 **VERY CONFUSING, BECAUSE MAKING THEM BASICALLY NULLABLE BY SETTING THEM TO FALSE MAKES MORE SENSE**
 
+### Relationships
+
+#### OneToMany
+
+To set up a one to many relationship, it is mandatory to use **models.ForeignKey()** inside the model, which then points to another model / table.
+
+<pre>
+class Book(models.Model)
+    author = models.ForeignKey(
+        Author,
+        on_delete=models.CASCADE,
+        null=True
+    )
+</pre>
+
+A book will then only have _one_ author, but authors can be assigned to many books.
+
+#### OneToOne
+
+
+
 # Migrations
 
 Migrations are used to create or alter a database. Migrations are a set of instructions as python code on how to treat data or the database. These can be creating a table, altering a table or even deleting a table.
@@ -354,9 +375,25 @@ This simply creates migrations, however it does not perform those operations yet
 
 > python managa\.py migrate
 
+> [!IMPORTANT]
+> - Do not seperate model attributes by comma, django will not pick up these fields.
+> - Do not append _id on attribute names, as django will do it by convention.
+
 # Query functions
 
-With django, it is not needed to know SQL syntax. Django has built-in query functions, that are then executed in the database level. By calling query functions, django translates them into SQL syntax and executes it on the database.
+With django, it is not needed to know SQL syntax. Django has built-in query functions, that are then executed on the database level. By calling query functions, django translates them into SQL syntax and executes it on the database.
+
+> [!NOTE]
+> It is important to note that django is smart enough to cache previous results and might not query the database again. Only when the same line is executed again.
+> Django will only reach out to the database once save() is called on the objects, or the variable on which a query function is called on is further processed. 
+
+<pre>
+book = Book.objects.all() <- not hitting the database
+print(book) <- hitting the database
+
+book = Book(title="Blah", author="Pew")
+book.save() <- hitting the database
+</pre>
 
 > [!WARNING]
 > Even if it is not required to know SQL, it is highly recommended to know SQL nonetheless. SQL is a very crucial part of backend, aswell as fullstack development
@@ -371,4 +408,58 @@ With django, it is not needed to know SQL syntax. Django has built-in query func
 - aggregate
 - exists
 
-> [!IMPORTANT] Some of them return a QuerySet, whilst others don't
+> [!IMPORTANT] 
+> Some of them return a QuerySet, whilst others don't
+
+## Cross Model Query - Reverse object related lookup
+
+### _set
+
+Having a look at the following setup
+
+<pre>
+class Author(models.Model):
+    first_name = models.CharField(...)
+    last_name = models.CharField(...)
+
+class Book(models.Model)
+    author = models.ForeignKey(
+        Author,
+        on_delete=models.CASCADE,
+        null=True
+    )
+</pre>
+
+Book can easily be queried to the its corresponding auther. This however proves difficult the other way around, since there is no foreign key setup for book in author.
+
+The django built-in reverse lookup **_set** is a convenient way to get around this problem.
+
+First of all, the author object, for which the related books should be found with, is needed. By convention, the reverse is then called on the author object by appending **_set** on book.
+
+<pre>
+author = Author.objects.get(first_name="whoever")
+books = author.book_set.all()
+</pre>
+
+> [!NOTE]
+> There is no book attribute on author, but django will split it apart and looks inside the book model, which does have a foreign key for author. Book is transformed to lowercase.
+
+#### related_name
+
+A little workaround _set is to define a related_name parameter to the field, that has the foreign key.
+
+<pre>
+class Book(models.Model)
+    author = models.ForeignKey(
+        Author,
+        on_delete=models.CASCADE,
+        related_name="books"
+    )
+</pre>
+
+Django will then create a hidden field for books. That has the effect of not having to append **_set** on book anymore, but instead use the related name.
+
+<pre>
+author = Author.objects.get(first_name="whoever")
+books = author.books.all()
+</pre>
