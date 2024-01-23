@@ -134,6 +134,93 @@ return render(request, "bookstore/book.html", {
 > [!NOTE] 
 > Django looks inside the template folder automatically
 
+## Class-based Views
+
+### View
+
+While the general View implementation is not much different from function based views, there is some slight differences.
+
+#### get() and post()
+
+It is possible to use general View as get aswell as post. There is no need to define separate classes, however, get() and post() need to be defined inside the view class. This works well with forms to keep them populated with data, if not all entries are correct, so the user does not have to put in all the data again.
+
+<pre>
+class Book(View):
+    def get(self, request):
+        ...
+        return render(...)
+    
+    def post(self, request):
+        ...
+        return render(...)
+</pre>
+
+### TemplateView
+
+TemplateView is a view type specificly designed to build views that render templates. Django will choose a specified template, once a GET request reaches this view and renders it with the contex containing parameters captured in the URL.
+
+In this case, the TemplateView, rather the context, holds a dictionary of parameters that were automatically passed into the view. The books can then be queried with the gives kwargs to get a specific book. The context dictionary can then be filled with the book data. 
+
+> [!NOTE]
+> super().get_context_data() is used to get data from the parent class (TemplateView in the following example). It is a way to further extend views.
+
+<pre>
+class BookDetailView(TemplateView):
+    template_name = "path_to_template.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        book = Book.objects.get(title=kwargs['book_name'])
+
+        context['title'] = book.title
+
+        return context
+</pre>
+
+To extend this view, a new view class is required, which then extends BookDetailView instead of TemplateView. That way, the new view holds all the context data from of BookDetailView
+
+<pre>
+class ExtendedBookDetailView(BookDetailView): ...
+</pre>
+
+### ListView
+
+ListView is a class that builds upon TemplateView, but is specifically designed to work with list and helps to write much less code. The Base view takes the parameter ListView.
+
+While it is possible to work with the context data, ListView preferably works with the model to fetch data. By default, the list object is accessable by the name **object_list** and properties can be accessed on that.
+
+**context_object_name** is a built-in property to set the default name of the list object inside the template.
+
+<pre>
+class BooksView(ListView):
+    template_name = "path_to_template.html"
+    model = Book
+    context_object_name = "books"
+</pre>
+
+There is many ways to manipulate the list object by overriding built-in functions or properties.
+
+- paginate_by # property to set a maximum displayed amount
+- get_ordering(self) # orders the list
+
+### DetailView
+
+For fetching a single piece of data via a model, a DetailView comes in handy. If extra data is needed, it is of cource possible to override get_context_data. Django automatically loads whatever model it is passed. To identify which entry of data it should fetch, it uses a slug or primary key that is supplied via the URL.
+
+<pre>
+class BooksView(ListView):
+    template_name = "path_to_template.html"
+    model = Book
+</pre>
+
+For the DetailView to work, it is important to alter the URL a bit. If it is supplied an <int\:id>, simply change it to <int\:pk> as pk stands for primary key. The value then is treated as a primary key. By default it will look at the id field inside the database.
+
+Inside templates, the model is easily accessed by the modelname, all lowercase, in this case: "book"
+
+### FormView
+
+Instead of using the general View implementation and its get or post methods, the FormView is a much shorter version to work with.
+
 # [TEMPLATES](https://docs.djangoproject.com/en/5.0/ref/templates/language/) (Django Template Language DTL)
 ## Template syntax
 
@@ -348,14 +435,13 @@ Sets the field when the object is first created. Current date is always used.
 
 #### OneToMany
 
-To set up a one to many relationship, it is mandatory to use **models.ForeignKey()** inside the model, which then points to another model / table.
+To set up a one to many relationship, it is mandatory to use **models.ForeignKey()** inside the model, which then points to another model.
 
 <pre>
 class Book(models.Model)
     author = models.ForeignKey(
         Author,
-        on_delete=models.CASCADE,
-        null=True
+        on_delete=models.CASCADE
     )
 </pre>
 
@@ -363,7 +449,175 @@ A book will then only have _one_ author, but authors can be assigned to many boo
 
 #### OneToOne
 
+To set up a one-to-one relationship is very straight forward. On one of the models that are related, **models.OneToOneField()** is required. 
 
+<pre>
+class ISBN(models.Model)
+    isbn = models.CharField(...)
+
+class Book(models.Model)
+    isbn = models.OneToOneField(
+        ISBN,
+        on_delete=models.CASCADE
+    )
+</pre>
+
+> [!NOTE]
+> Tables that are related by a one-to-one relationship can aswell be merged together from the start, unless there is a reason not to.
+
+#### ManyToMany
+
+Setting up a many-to-many relationship is just as simple by adding models.ManyToManyField() to one of the models. Django then creates a lookup table that links the tables.
+
+<pre>
+class Country(models.Model)
+    name = models.CharField(...)
+    code = models.CharField(...)
+
+class Book(models.Model)
+    published_countries = models.ManyToManyField(
+        Country, 
+        related_name="books"
+    )
+</pre>
+
+# Forms
+
+## Form Class
+
+The form class is a simple way to define forms. Merely the shape with the different input fields are defined. This looks very similar to model fields. The form class has built-in validations. Unlike model fields, the form fields will not have any impact on the database per se.
+
+<pre>
+from django import forms
+
+class BookForm(forms.Form):
+    title = forms.CharField()
+    published_countries = forms.ModelMultipleChoiceField(queryset=Country.objects.all(), widget=forms.CheckboxSelectMultiple)
+</pre>
+
+<pre>
+def bookform(request):
+    if request.method == 'POST':
+        form = BookForm(request.POST)
+
+        if form.is_valid():
+            book = Book.objects.create(title=form.cleaned_data['title'],
+            book.published_countries.set(form.cleaned_data['published_countries'])
+            
+            book.save()
+
+            return HttpResponseRedirect("/bookstore/books")
+    else:
+        form = BookForm()
+        
+    return render(request, "bookstore/bookform.html", {
+        "form": form
+    })
+</pre>
+
+By first creating the book object with the create() method of Book, it is then possible to set the countries on the published_countries field. 
+
+> [!NOTE]
+> ManyToMany fields are not accessable during object initialization. 
+When working with relationships, it may prove better to use ModelForm
+
+## ModelForm Class
+
+With ModelForms it is important to configure it with the nested Meta class. There the model it should work with is set, but also other configurations.
+
+It is not required to create a new instance for new data, because .save() can already be called on the form. That is only possible by connecting the model with the form.
+
+### Updating data
+
+Since the ModelForm is already connected to to model, it may prove useful to fetch existing data from the database and use the form to update data. By creating an instance for the existing data and then passing that data to the form via the instance parameter, django passes existing data into their respective fields. This instance however, needs to be passed via the request from another endpoint.
+
+<pre>
+def bookform(request):
+    if request.method == 'POST':
+        existing_data = Book.objects.get(pk=request.pk)
+        form = BookForm(request.POST, instance=existing_data)
+
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect("/bookstore/books")
+    else:
+        form = BookForm()
+        
+    return render(request, "bookstore/bookform.html", {
+        "form": form
+    })
+</pre>
+
+### Meta config
+
+#### model
+
+The model field hooks the model with the form itself. The model may not be instantiated.
+
+#### fields
+
+##### \_\_all\_\_
+
+This special variable makes sure all fields are included in the form.
+
+<pre>
+fields = '__all__'
+</pre>
+
+##### only define specific fields
+
+By defining specific fields inside the fields field, django makes sure to only include the specified fields.
+
+<pre>
+fields = [
+    '...',
+    '...'
+]
+</pre>
+
+> [!IMPORTANT]
+> By specifying fields, it is important to pass a list to fields.
+
+#### exclude
+
+With exlude it is possible to exclude specific fields from the form.
+
+<pre>
+exclude = [
+    '...',
+    '...'
+]
+</pre>
+
+> [!IMPORTANT]
+> By excluding fields, it is important to pass a list to exclude, even if only one field is excluded.
+
+#### labels
+
+ModelForm, by default, auto generates label based on property names. This is prevented by configuring the labels field. Property_name has to match the model property, while label_name is the label it should display.
+
+<pre>
+labels = {
+    'property_name' : 'label_name',
+    'property_name' : 'label_name'
+}
+</pre>
+
+#### error_messages
+
+By configuring error_messages, it is possible to configure error messages for fields and their respective cases, such as required or max_length
+
+<pre>
+error_messages = {
+    'property_name' : {
+        'required': 'error_message',
+        'max_length': 'error_message'
+    },
+    '...' : {
+        '...': '...'
+    },
+}
+</pre>
 
 # Migrations
 
@@ -425,12 +679,11 @@ class Author(models.Model):
 class Book(models.Model)
     author = models.ForeignKey(
         Author,
-        on_delete=models.CASCADE,
-        null=True
+        on_delete=models.CASCADE
     )
 </pre>
 
-Book can easily be queried to the its corresponding auther. This however proves difficult the other way around, since there is no foreign key setup for book in author.
+Book can easily be queried to the its corresponding author. This however proves difficult the other way around, since there is no foreign key setup for book in author.
 
 The django built-in reverse lookup **_set** is a convenient way to get around this problem.
 
